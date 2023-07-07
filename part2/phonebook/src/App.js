@@ -5,6 +5,8 @@ import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 
+import personService from './services/persons'
+
 const App = () => {
 	const [persons, setPersons] = useState([])
 	const [newName, setNewName] = useState('')
@@ -12,8 +14,8 @@ const App = () => {
 	const [query, setQuery] = useState('')
 
 	useEffect(() => {
-		axios
-			.get('http://localhost:3001/persons')
+		personService
+			.getAll()
 			.then(response => {
 				setPersons(response.data)
 			})
@@ -24,19 +26,48 @@ const App = () => {
 		const personObject = {
 			name: newName,
 			number: newNumber,
-			id: persons.length + 1
 		}
 
-		const duplicate = (persons.filter(person => person.name === newName).length > 0) ||
-			(persons.filter(person => person.number === newNumber).length > 0)
+		const duplicateExists = persons.filter(person => person.name === personObject.name).length > 0
 
-		if (duplicate) {
-			alert(`${newName} and/or ${newNumber} is already added to the phonebook`)
+		if (duplicateExists) {
+			const duplicateObject = persons.filter(person => person.name === personObject.name)[0]
+
+			if (window.confirm(`${duplicateObject.name} already exists in the phonebook, replace the old number with a new one?`)) {
+				personService
+					.update(duplicateObject.id, personObject)
+					.then(returnedPerson => {
+						setPersons(persons.map(person => person.id !== duplicateObject.id ? person : returnedPerson.data))
+						setNewName('')
+						setNewNumber('')
+					})
+			}
 		}
 		else {
-			setPersons(persons.concat(personObject))
-			setNewName('')
-			setNewNumber('')
+			personService
+				.create(personObject)
+				.then(returnedPerson => {
+					setPersons(persons.concat(returnedPerson.data))
+					setNewName('')
+					setNewNumber('')
+				})
+		}
+
+	}
+
+	const toDelete = (event) => {
+		const personObject = persons.filter(person => {
+			return event.target.id == person.id
+		})[0]
+
+		if (window.confirm(`Delete ${personObject.name} ?`)) {
+			personService
+				.remove(personObject)
+				.then(response => {
+					setPersons(persons.filter(person => {
+						return person.id != personObject.id
+					}))
+				})
 		}
 	}
 
@@ -59,7 +90,7 @@ const App = () => {
 			<h3>add a new</h3>
 			<PersonForm add={addPerson} name={newName} nameChange={handleNameChange} number={newNumber} numberChange={handleNumberChange} />
 			<h3>Numbers</h3>
-			<Persons persons={persons} query={query} />
+			<Persons persons={persons} query={query} toDelete={toDelete} />
 		</div>
 	)
 }
