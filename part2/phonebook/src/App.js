@@ -4,6 +4,7 @@ import axios from 'axios'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import Notification from './components/Notification'
 
 import personService from './services/persons'
 
@@ -12,6 +13,8 @@ const App = () => {
 	const [newName, setNewName] = useState('')
 	const [newNumber, setNewNumber] = useState('')
 	const [query, setQuery] = useState('')
+	const [message, setMessage] = useState('')
+	const [isError, setIsError] = useState(0)
 
 	useEffect(() => {
 		personService
@@ -40,6 +43,25 @@ const App = () => {
 						setPersons(persons.map(person => person.id !== duplicateObject.id ? person : returnedPerson.data))
 						setNewName('')
 						setNewNumber('')
+						setIsError(2)
+						setMessage(`Updated ${personObject.name}`)
+						setTimeout(() => {
+							setMessage('')
+							setIsError(0)
+						}, 5000)
+					})
+					.catch(error => {
+						setIsError(1)
+						setMessage(`Information of ${personObject.name} has already been removed from server`)
+						personService
+							.getAll()
+							.then(response => {
+								setPersons(response.data)
+							})
+						setTimeout(() => {
+							setMessage('')
+							setIsError(0)
+						}, 5000)
 					})
 			}
 		}
@@ -50,6 +72,12 @@ const App = () => {
 					setPersons(persons.concat(returnedPerson.data))
 					setNewName('')
 					setNewNumber('')
+					setIsError(2)
+					setMessage(`Added ${returnedPerson.data.name}`)
+					setTimeout(() => {
+						setMessage('')
+						setIsError(0)
+					}, 5000)
 				})
 		}
 
@@ -86,6 +114,7 @@ const App = () => {
 	return (
 		<div>
 			<h2>Phonebook</h2>
+			<Notification message={message} isError={isError} />
 			<Filter query={query} handleChange={handleQueryChange} />
 			<h3>add a new</h3>
 			<PersonForm add={addPerson} name={newName} nameChange={handleNameChange} number={newNumber} numberChange={handleNumberChange} />
